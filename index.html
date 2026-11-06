@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Motor de blackjack</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --surface:#0C1310; --card:#152019; --card-2:#1C2A22; --ink:#F3ECD8; --muted:#9DAC9F; --line:#2E3D33; --line-2:#243329;
+  --accent:#D9B64B; --accent-2:#B8922C; --accent-ink:#1A1405; --felt:#0F3D33; --felt-ink:#E9F2EE; --felt-dim:#8FB3A6;
+  --win:#3FC98C; --lose:#F06B6B; --push:#8E9BAA; --warn:#E3A63B;
+  --gold-line:color-mix(in srgb,var(--accent) 26%,transparent);
+  --radius:18px; --radius-s:12px; --display:"Playfair Display",Georgia,serif;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box;}
+html,body{margin:0;min-height:100%;}
+body{background:var(--surface);background-image:radial-gradient(ellipse 90% 55% at 50% -12%,#1B2D24 0%,transparent 70%),radial-gradient(ellipse 70% 40% at 100% 110%,#141F1A 0%,transparent 70%);background-attachment:fixed;color:var(--ink);font-family:"Figtree",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.45;}
+button,input{font:inherit;color:inherit;} button{cursor:pointer;}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+/* ---- Puerta de acceso ---- */
+#gate{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 16px;}
+#gate[hidden]{display:none;}
+.g-view{display:none;width:100%;max-width:440px;} .g-view.on{display:block;}
+.g-card{background:var(--card);border:1px solid var(--gold-line);border-radius:var(--radius);padding:26px 26px 22px;box-shadow:0 18px 50px rgba(0,0,0,.4);position:relative;overflow:hidden;}
+.g-card::before{content:"";position:absolute;inset:6px;border:1px solid color-mix(in srgb,var(--ink) 8%,transparent);border-radius:calc(var(--radius) - 6px);pointer-events:none;}
+.g-brand{display:flex;align-items:center;gap:12px;margin-bottom:6px;}
+.g-brand i{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 50% 40%,#F0D275,#B8922C 70%);box-shadow:inset 0 0 0 2px #1A1405,inset 0 0 0 4px #E8C860,0 2px 4px rgba(0,0,0,.5);display:inline-flex;align-items:center;justify-content:center;font-style:normal;font-size:14px;font-weight:800;color:#1A1405;}
+.g-brand h1{margin:0;font-family:var(--display);font-size:22px;font-weight:700;}
+.g-sub{color:var(--muted);font-size:13.5px;margin:0 0 16px;}
+.g-seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;background:var(--surface);border-radius:12px;padding:4px;margin-bottom:16px;}
+.g-seg button{border:0;background:transparent;color:var(--muted);padding:8px;border-radius:9px;font-weight:600;}
+.g-seg button[aria-pressed="true"]{background:linear-gradient(180deg,#E8C860,var(--accent-2));color:var(--accent-ink);}
+.g-field[hidden]{display:none;}
+.g-field{display:flex;flex-direction:column;gap:5px;font-size:13px;color:var(--muted);margin-bottom:12px;}
+.g-field input{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:11px 12px;color:var(--ink);font-size:15px;}
+.g-field input:focus{border-color:var(--accent);outline:none;}
+.g-btn{width:100%;border:1px solid transparent;border-radius:12px;padding:12px;font-weight:700;font-size:15px;background:linear-gradient(180deg,#E8C860,var(--accent-2));color:var(--accent-ink);margin-top:4px;}
+.g-btn:disabled{opacity:.6;cursor:default;}
+.g-btn.ghost{background:transparent;border-color:var(--line);color:var(--ink);font-weight:600;}
+.g-row{display:flex;gap:8px;margin-top:10px;} .g-row .g-btn{margin-top:0;}
+.g-link{background:none;border:0;color:var(--muted);font-size:13px;padding:8px 0 0;text-decoration:underline;text-underline-offset:3px;}
+.g-msg{border-radius:var(--radius-s);padding:10px 12px;font-size:13.5px;margin:0 0 12px;border:1px solid var(--line-2);background:var(--card-2);display:none;}
+.g-msg.on{display:block;}
+.g-msg.ok{background:color-mix(in srgb,var(--win) 12%,var(--card));border-color:color-mix(in srgb,var(--win) 40%,transparent);}
+.g-msg.bad{background:color-mix(in srgb,var(--lose) 12%,var(--card));border-color:color-mix(in srgb,var(--lose) 40%,transparent);}
+.g-msg.info{background:color-mix(in srgb,var(--warn) 12%,var(--card));border-color:color-mix(in srgb,var(--warn) 40%,transparent);}
+.g-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:999px;font-size:13px;font-weight:600;background:color-mix(in srgb,var(--warn) 16%,var(--card));color:var(--warn);border:1px solid color-mix(in srgb,var(--warn) 40%,transparent);margin-bottom:12px;}
+.g-badge::before{content:"";width:8px;height:8px;border-radius:50%;background:currentColor;}
+.g-p{margin:0 0 10px;font-size:14.5px;} .g-p.small{font-size:13px;color:var(--muted);}
+.g-code{display:block;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-family:ui-monospace,Menlo,monospace;font-size:12.5px;white-space:pre-wrap;word-break:break-all;margin:8px 0;}
+.g-spin{width:34px;height:34px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--accent);animation:spin .9s linear infinite;margin:6px auto 14px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.g-foot{color:var(--muted);font-size:12px;text-align:center;margin-top:14px;}
+ol.g-steps{padding-left:20px;margin:0 0 10px;font-size:14px;} ol.g-steps li{margin-bottom:6px;}
+
+/* ---- Cuenta y panel de usuarios (se montan sobre el motor) ---- */
+.acct{display:flex;align-items:center;gap:8px;margin-left:8px;}
+.acct-mail{font-size:12.5px;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.acct-btn{position:relative;border:1px solid var(--gold-line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:13px;font-weight:600;}
+.acct-btn.ghost{border-color:var(--line);color:var(--muted);}
+.acct-btn b{position:absolute;top:-6px;right:-6px;min-width:18px;height:18px;border-radius:9px;background:var(--lose);color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;padding:0 5px;}
+.acct-btn b[hidden]{display:none;}
+@media (max-width:1360px){ .acct-mail{display:none;} }
+@media (max-width:1180px){ .signal span{display:none;} }
+@media (max-width:700px){ .acct{order:2;margin-left:auto;} }
+.usr{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.55);display:flex;justify-content:flex-end;}
+.usr[hidden]{display:none;}
+.usr-card{width:min(560px,100%);height:100%;background:var(--card);border-left:1px solid var(--gold-line);display:flex;flex-direction:column;box-shadow:-20px 0 50px rgba(0,0,0,.4);}
+.usr-head{display:flex;align-items:center;gap:10px;padding:16px 18px;border-bottom:1px solid var(--line-2);}
+.usr-head h2{margin:0;font-family:var(--display);font-size:18px;flex:1;color:var(--ink);}
+.usr-body{overflow:auto;padding:12px 18px 24px;flex:1;}
+.usr-sec{font-size:12.5px;color:var(--accent);font-weight:600;letter-spacing:.04em;margin:12px 0 6px;}
+.usr-row{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line-2);}
+.usr-row .nm{font-weight:600;} .usr-row .em{font-size:12.5px;color:var(--muted);word-break:break-all;} .usr-row .dt{font-size:12px;color:var(--muted);}
+.usr-row .st{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:1px;}
+.usr-row .st.ok{background:color-mix(in srgb,var(--win) 18%,transparent);color:var(--win);} .usr-row .st.wait{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn);} .usr-row .st.adm{background:color-mix(in srgb,var(--accent) 18%,transparent);color:var(--accent);}
+.usr-acts{display:flex;flex-direction:column;gap:6px;}
+.usr-acts button{border:1px solid var(--line);background:var(--card-2);color:var(--ink);border-radius:9px;padding:6px 10px;font-size:12.5px;font-weight:600;white-space:nowrap;}
+.usr-acts button.ok{background:linear-gradient(180deg,#E8C860,var(--accent-2));color:var(--accent-ink);border-color:transparent;}
+.usr-acts button.bad{color:var(--lose);}
+.usr-empty{color:var(--muted);font-size:13.5px;padding:10px 0;}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:110;background:var(--card);border:1px solid var(--gold-line);border-radius:12px;padding:10px 16px;font-size:14px;box-shadow:0 10px 30px rgba(0,0,0,.5);}
+.toast[hidden]{display:none;}
+@media (prefers-reduced-motion:reduce){ .g-spin{animation-duration:2s;} }
+</style>
+</head>
+<body>
+<div id="gate">
+
+  <section class="g-view" id="v-setup"><div class="g-card">
+    <div class="g-brand"><i>A</i><h1>Motor de blackjack</h1></div>
+    <p class="g-sub">Falta configurar el acceso.</p>
+    <p class="g-p">Este archivo todavía no tiene la dirección ni la clave pública de tu proyecto de Supabase. Ábrelo con un editor de texto, busca <code>CONFIG</code> al final y pega los dos valores que aparecen en <b>Project Settings → API</b>. Los pasos completos están en <code>LEEME.md</code>.</p>
+  </div></section>
+
+  <section class="g-view on" id="v-auth"><div class="g-card">
+    <div class="g-brand"><i>A</i><h1>Motor de blackjack</h1></div>
+    <p class="g-sub">Acceso reservado. Entra con tu cuenta o solicita una; el administrador aprueba cada alta.</p>
+    <div class="g-seg" role="tablist"><button id="tEntrar" aria-pressed="true">Entrar</button><button id="tRegistro" aria-pressed="false">Crear cuenta</button></div>
+    <div class="g-msg" id="authMsg" role="status"></div>
+    <form id="fAuth" novalidate>
+      <label class="g-field" id="fNombre" hidden>Tu nombre<input id="iNombre" type="text" autocomplete="name" maxlength="60" placeholder="Como quieres aparecer"></label>
+      <label class="g-field">Correo<input id="iCorreo" type="email" autocomplete="email" required placeholder="tu@correo.com"></label>
+      <label class="g-field">Contraseña<input id="iPass" type="password" autocomplete="current-password" required minlength="8" placeholder="Mínimo 8 caracteres"></label>
+      <button class="g-btn" id="bAuth" type="submit">Entrar</button>
+    </form>
+    <button class="g-link" id="bOlvide" type="button">¿Olvidaste tu contraseña?</button>
+    <p class="g-foot">Herramienta de análisis matemático. Los datos de juego se guardan sólo en tu navegador.</p>
+  </div></section>
+
+  <section class="g-view" id="v-reset"><div class="g-card">
+    <div class="g-brand"><i>A</i><h1>Nueva contraseña</h1></div>
+    <p class="g-sub">Escribe la contraseña que usarás a partir de ahora.</p>
+    <div class="g-msg" id="resetMsg" role="status"></div>
+    <form id="fReset" novalidate>
+      <label class="g-field">Nueva contraseña<input id="iPass2" type="password" autocomplete="new-password" required minlength="8" placeholder="Mínimo 8 caracteres"></label>
+      <button class="g-btn" id="bReset" type="submit">Guardar y entrar</button>
+    </form>
+  </div></section>
+
+  <section class="g-view" id="v-pending"><div class="g-card">
+    <div class="g-brand"><i>A</i><h1>Motor de blackjack</h1></div>
+    <span class="g-badge">Pendiente de aprobación</span>
+    <p class="g-p">Tu cuenta <b id="pendMail"></b> ya está registrada. El administrador tiene que aprobarla antes de que puedas usar el motor; esta pantalla se actualiza sola cuando eso ocurra.</p>
+    <p class="g-p small" id="pendHint"></p>
+    <div class="g-row"><button class="g-btn ghost" id="bRevisar" type="button">Volver a comprobar</button><button class="g-btn ghost" id="bSalir1" type="button">Cerrar sesión</button></div>
+  </div></section>
+
+  <section class="g-view" id="v-loading"><div class="g-card" style="text-align:center">
+    <div class="g-spin" aria-hidden="true"></div>
+    <p class="g-p" id="loadTxt">Comprobando tu acceso…</p>
+  </div></section>
+
+  <section class="g-view" id="v-error"><div class="g-card">
+    <div class="g-brand"><i>A</i><h1>No se pudo entrar</h1></div>
+    <div class="g-msg bad on" id="errTxt"></div>
+    <div class="g-row"><button class="g-btn ghost" id="bReintentar" type="button">Reintentar</button><button class="g-btn ghost" id="bSalir2" type="button">Cerrar sesión</button></div>
+  </div></section>
+
+</div>
+<div id="motorRoot"></div>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ======================= CONFIGURACIÓN =======================
+   Pega aquí los valores de tu proyecto de Supabase (Project Settings → API).
+   La clave "anon public" está hecha para usarse en el navegador; la seguridad
+   la ponen las políticas del SQL, no esta clave.                              */
+const CONFIG={
+  SUPABASE_URL:"",            // p. ej. "https://abcdefghijkl.supabase.co"
+  SUPABASE_ANON_KEY:"",       // la clave larga "anon public"
+  MOTOR:"storage",            // "storage": el motor se descarga del bucket privado y sólo lo reciben cuentas aprobadas (recomendado)
+                              // "local": carga ./motor.js junto a este archivo (más simple, pero el archivo queda al alcance de quien conozca la dirección)
+  BUCKET:"motor",             // nombre del bucket (el SQL lo crea con este nombre)
+  ARCHIVO:"motor.js"          // nombre del archivo dentro del bucket
+};
+/* ============================================================= */
+
+(function(){
+const $=id=>document.getElementById(id);
+let sb=null, sesion=null, perfil=null, motorCargado=false, modo='entrar', pollTimer=null;
+const vista=id=>{ document.querySelectorAll('#gate .g-view').forEach(v=>v.classList.toggle('on',v.id===id)); };
+function msg(el,text,kind){ el.textContent=text||''; el.className='g-msg'+(text?' on '+(kind||'info'):''); }
+function traducir(m){
+  m=String(m||'');
+  if(/Invalid login credentials/i.test(m))return 'Correo o contraseña incorrectos.';
+  if(/Email not confirmed/i.test(m))return 'Confirma tu correo antes de entrar: revisa tu bandeja (y el spam).';
+  if(/already registered|already been registered/i.test(m))return 'Ese correo ya tiene cuenta. Entra con tu contraseña.';
+  if(/Password should be at least/i.test(m))return 'La contraseña es demasiado corta.';
+  if(/rate limit|too many/i.test(m))return 'Demasiados intentos seguidos. Espera un minuto.';
+  if(/invalid email|Unable to validate email/i.test(m))return 'Ese correo no parece válido.';
+  if(/Failed to fetch|NetworkError|Load failed/i.test(m))return 'Sin conexión con el servidor. Revisa tu internet o la dirección del proyecto.';
+  return m;
+}
+function toast(t,ms){ const el=$('toast'); el.textContent=t; el.hidden=false; clearTimeout(el._t); el._t=setTimeout(()=>{el.hidden=true;},ms||4000); }
+
+/* ---- Inicio ---- */
+async function init(){
+  if(!CONFIG.SUPABASE_URL||!CONFIG.SUPABASE_ANON_KEY){ vista('v-setup'); return; }
+  if(!window.supabase){ $('errTxt').textContent='No se pudo cargar la librería de Supabase. Revisa tu conexión y vuelve a cargar la página.'; vista('v-error'); return; }
+  sb=supabase.createClient(CONFIG.SUPABASE_URL,CONFIG.SUPABASE_ANON_KEY);
+  sb.auth.onAuthStateChange((ev,s)=>{
+    if(ev==='PASSWORD_RECOVERY'){ sesion=s; vista('v-reset'); return; }
+    if(ev==='SIGNED_OUT'){ sesion=null; perfil=null; clearInterval(pollTimer); if(motorCargado){location.reload();} else { vista('v-auth'); } return; }
+    if(s) sesion=s;
+  });
+  const {data:{session}}=await sb.auth.getSession(); sesion=session;
+  if(location.hash&&/type=recovery/.test(location.hash)){ vista('v-reset'); return; }
+  if(!sesion){ vista('v-auth'); return; }
+  await revisar(false);
+}
+
+/* ---- Perfil y aprobación ---- */
+async function leerPerfil(){
+  const {data,error}=await sb.from('perfiles').select('id,nombre,correo,aprobado,admin,creado').eq('id',sesion.user.id).maybeSingle();
+  if(error)throw error; return data;
+}
+async function revisar(silencioso){
+  if(!silencioso)vista('v-loading');
+  try{ perfil=await leerPerfil(); }
+  catch(e){ clearInterval(pollTimer); $('errTxt').textContent='No se pudo leer tu perfil: '+traducir(e.message)+'. Si acabas de crear el proyecto, comprueba que ejecutaste supabase.sql completo.'; vista('v-error'); return; }
+  if(perfil&&perfil.aprobado){ clearInterval(pollTimer); await cargarMotor(); return; }
+  $('pendMail').textContent=sesion.user.email||'';
+  $('pendHint').textContent=perfil?'':'Tu perfil aún no aparece en la tabla de usuarios. Si eres el administrador y acabas de configurar el proyecto, ejecuta la sección «Respaldo» de supabase.sql.';
+  if(!silencioso)vista('v-pending');
+  if(!pollTimer) pollTimer=setInterval(()=>revisar(true),20000);
+}
+
+/* ---- Cargar el motor (sólo cuentas aprobadas) ---- */
+async function cargarMotor(){
+  vista('v-loading'); $('loadTxt').textContent='Cargando el motor…';
+  let code='';
+  try{
+    if(CONFIG.MOTOR==='local'){ const r=await fetch('./'+CONFIG.ARCHIVO,{cache:'no-store'}); if(!r.ok)throw new Error('HTTP '+r.status+' al pedir '+CONFIG.ARCHIVO); code=await r.text(); }
+    else { const {data,error}=await sb.storage.from(CONFIG.BUCKET).download(CONFIG.ARCHIVO); if(error)throw error; code=await data.text(); }
+  }catch(e){
+    const m=String(e&&(e.message||e)||'');
+    $('errTxt').textContent=/not found|404|Object not found/i.test(m)?'No se encontró '+CONFIG.ARCHIVO+' en el bucket «'+CONFIG.BUCKET+'». Súbelo desde Storage en el panel de Supabase.':(/row-level security|Unauthorized|403|400/i.test(m)?'El servidor negó la descarga del motor. Comprueba la política del bucket en supabase.sql y que tu cuenta esté aprobada.':'No se pudo descargar el motor: '+traducir(m));
+    vista('v-error'); return;
+  }
+  if(!/PORTAL_STANDALONE/.test(code.slice(0,400))){ $('errTxt').textContent='El archivo descargado no parece ser el motor (motor.js). Vuelve a subirlo al bucket.'; vista('v-error'); return; }
+  $('gate').hidden=true;
+  const s=document.createElement('script'); s.textContent=code; document.body.appendChild(s);
+  motorCargado=true; document.title='Motor de blackjack';
+  montarCuenta();
+}
+
+/* ---- Barra de cuenta y panel de usuarios ---- */
+function montarCuenta(){
+  const bar=document.querySelector('.top-in'); if(!bar)return;
+  const d=document.createElement('div'); d.className='acct';
+  d.innerHTML=`<span class="acct-mail"></span>${perfil.admin?'<button class="acct-btn" id="acUsers" type="button">Usuarios<b id="acPend" hidden></b></button>':''}<button class="acct-btn ghost" id="acOut" type="button">Salir</button>`;
+  d.querySelector('.acct-mail').textContent=perfil.nombre||sesion.user.email||'';
+  bar.appendChild(d);
+  $('acOut').addEventListener('click',async()=>{ await sb.auth.signOut(); });
+  if(perfil.admin){
+    const panel=document.createElement('div'); panel.id='usersPanel'; panel.className='usr'; panel.hidden=true;
+    panel.innerHTML=`<div class="usr-card" role="dialog" aria-label="Usuarios"><div class="usr-head"><h2>Usuarios</h2><button class="acct-btn ghost" id="upRefresh" type="button">Actualizar</button><button class="acct-btn ghost" id="upClose" type="button">Cerrar</button></div><div class="usr-body" id="upBody"><p class="usr-empty">Cargando…</p></div></div>`;
+    document.body.appendChild(panel);
+    panel.addEventListener('click',e=>{ if(e.target===panel)panel.hidden=true; });
+    $('upClose').addEventListener('click',()=>{panel.hidden=true;});
+    $('upRefresh').addEventListener('click',listarUsuarios);
+    $('acUsers').addEventListener('click',()=>{ panel.hidden=false; listarUsuarios(); });
+    contarPendientes();
+  }
+}
+async function contarPendientes(){
+  try{ const {count}=await sb.from('perfiles').select('id',{count:'exact',head:true}).eq('aprobado',false); const b=$('acPend'); if(b){ b.hidden=!count; b.textContent=count||''; } if(count)toast(count===1?'Hay 1 solicitud de acceso pendiente.':'Hay '+count+' solicitudes de acceso pendientes.'); }catch(e){}
+}
+function fecha(iso){ try{ return new Date(iso).toLocaleDateString('es-MX',{day:'numeric',month:'short',year:'numeric'}); }catch(e){ return ''; } }
+async function listarUsuarios(){
+  const body=$('upBody'); body.innerHTML='<p class="usr-empty">Cargando…</p>';
+  const {data,error}=await sb.from('perfiles').select('id,nombre,correo,aprobado,admin,creado').order('creado',{ascending:false});
+  if(error){ body.innerHTML=''; const p=document.createElement('p'); p.className='usr-empty'; p.textContent='No se pudo leer la lista: '+traducir(error.message); body.appendChild(p); return; }
+  const pend=data.filter(u=>!u.aprobado), ok=data.filter(u=>u.aprobado);
+  body.innerHTML='';
+  const sec=(t)=>{ const h=document.createElement('div'); h.className='usr-sec'; h.textContent=t; body.appendChild(h); };
+  const row=(u)=>{
+    const r=document.createElement('div'); r.className='usr-row';
+    const info=document.createElement('div');
+    const nm=document.createElement('div'); nm.className='nm'; nm.textContent=u.nombre||'(sin nombre)';
+    const st=document.createElement('span'); st.className='st '+(u.admin?'adm':(u.aprobado?'ok':'wait')); st.textContent=u.admin?'Administrador':(u.aprobado?'Aprobado':'Pendiente'); nm.appendChild(st);
+    const em=document.createElement('div'); em.className='em'; em.textContent=u.correo||'';
+    const dt=document.createElement('div'); dt.className='dt'; dt.textContent='Registro: '+fecha(u.creado);
+    info.append(nm,em,dt);
+    const acts=document.createElement('div'); acts.className='usr-acts';
+    const yo=u.id===sesion.user.id;
+    if(!u.aprobado){ const b=document.createElement('button'); b.className='ok'; b.textContent='Aprobar'; b.addEventListener('click',()=>cambiar(u.id,{aprobado:true},b)); acts.appendChild(b); }
+    else if(!yo){ const b=document.createElement('button'); b.className='bad'; b.textContent='Revocar'; b.addEventListener('click',()=>cambiar(u.id,{aprobado:false,admin:false},b)); acts.appendChild(b); }
+    if(u.aprobado&&!yo){ const b=document.createElement('button'); b.textContent=u.admin?'Quitar admin':'Hacer admin'; b.addEventListener('click',()=>cambiar(u.id,{admin:!u.admin},b)); acts.appendChild(b); }
+    r.append(info,acts); body.appendChild(r);
+  };
+  sec('Pendientes ('+pend.length+')'); if(!pend.length){ const p=document.createElement('p'); p.className='usr-empty'; p.textContent='No hay solicitudes pendientes.'; body.appendChild(p); } pend.forEach(row);
+  sec('Con acceso ('+ok.length+')'); ok.forEach(row);
+  const b=$('acPend'); if(b){ b.hidden=!pend.length; b.textContent=pend.length||''; }
+}
+async function cambiar(id,cambios,btn){
+  btn.disabled=true;
+  const {error}=await sb.from('perfiles').update(cambios).eq('id',id);
+  if(error){ toast('No se pudo guardar: '+traducir(error.message)); btn.disabled=false; return; }
+  toast(cambios.aprobado===true?'Acceso aprobado.':(cambios.aprobado===false?'Acceso revocado.':'Guardado.'));
+  listarUsuarios();
+}
+
+/* ---- Formularios ---- */
+function setModo(m){
+  modo=m; $('tEntrar').setAttribute('aria-pressed',m==='entrar'); $('tRegistro').setAttribute('aria-pressed',m==='registro');
+  $('fNombre').hidden=m!=='registro'; $('bAuth').textContent=m==='registro'?'Crear cuenta':'Entrar';
+  $('iPass').autocomplete=m==='registro'?'new-password':'current-password'; msg($('authMsg'),'');
+}
+$('tEntrar').addEventListener('click',()=>setModo('entrar'));
+$('tRegistro').addEventListener('click',()=>setModo('registro'));
+$('fAuth').addEventListener('submit',async e=>{
+  e.preventDefault(); const correo=$('iCorreo').value.trim(), pass=$('iPass').value, nombre=$('iNombre').value.trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)){ msg($('authMsg'),'Escribe un correo válido.','bad'); return; }
+  if(pass.length<8){ msg($('authMsg'),'La contraseña debe tener al menos 8 caracteres.','bad'); return; }
+  if(modo==='registro'&&!nombre){ msg($('authMsg'),'Escribe tu nombre para que el administrador sepa quién eres.','bad'); return; }
+  const b=$('bAuth'); b.disabled=true;
+  try{
+    if(modo==='registro'){
+      const {data,error}=await sb.auth.signUp({email:correo,password:pass,options:{data:{nombre}}});
+      if(error)throw error;
+      if(data.user&&Array.isArray(data.user.identities)&&data.user.identities.length===0){ msg($('authMsg'),'Ese correo ya tiene cuenta. Entra con tu contraseña o usa «¿Olvidaste tu contraseña?».','info'); setModoKeepMsg('entrar'); return; }
+      if(!data.session){ setModoKeepMsg('entrar'); msg($('authMsg'),'Cuenta creada. Te enviamos un correo para confirmarla: ábrelo, confirma y vuelve a entrar aquí. Después el administrador aprobará tu acceso.','ok'); return; }
+      sesion=data.session; await revisar(false);
+    } else {
+      const {data,error}=await sb.auth.signInWithPassword({email:correo,password:pass});
+      if(error)throw error;
+      sesion=data.session; await revisar(false);
+    }
+  }catch(err){ msg($('authMsg'),traducir(err.message),'bad'); }
+  finally{ b.disabled=false; }
+});
+function setModoKeepMsg(m){ const t=$('authMsg').textContent, k=$('authMsg').className; setModo(m); $('authMsg').textContent=t; $('authMsg').className=k; }
+$('bOlvide').addEventListener('click',async()=>{
+  const correo=$('iCorreo').value.trim();
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(correo)){ msg($('authMsg'),'Escribe tu correo arriba y vuelve a tocar «¿Olvidaste tu contraseña?».','info'); $('iCorreo').focus(); return; }
+  const {error}=await sb.auth.resetPasswordForEmail(correo,{redirectTo:location.href.split('#')[0]});
+  msg($('authMsg'),error?traducir(error.message):'Si ese correo tiene cuenta, recibirá un enlace para crear una contraseña nueva.',error?'bad':'ok');
+});
+$('fReset').addEventListener('submit',async e=>{
+  e.preventDefault(); const p=$('iPass2').value; if(p.length<8){ msg($('resetMsg'),'Mínimo 8 caracteres.','bad'); return; }
+  const {error}=await sb.auth.updateUser({password:p});
+  if(error){ msg($('resetMsg'),traducir(error.message),'bad'); return; }
+  history.replaceState(null,'',location.pathname+location.search);
+  const {data:{session}}=await sb.auth.getSession(); sesion=session;
+  if(sesion) await revisar(false); else vista('v-auth');
+});
+$('bRevisar').addEventListener('click',()=>revisar(false));
+$('bSalir1').addEventListener('click',async()=>{ await sb.auth.signOut(); });
+$('bSalir2').addEventListener('click',async()=>{ await sb.auth.signOut(); });
+$('bReintentar').addEventListener('click',()=>{ if(sesion)revisar(false); else vista('v-auth'); });
+
+window.portalSalir=()=>sb&&sb.auth.signOut();
+init();
+})();
+</script>
+</body>
+</html>
